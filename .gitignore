@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Environment / secrets (root, backend, frontend)
+.env
+.env.*
+*.env
+*.env.*
+*.local
+
+# Go build artifacts (backend)
+/backend/server
+/backend/bin/
+/backend/coverage.out
+
+# IDE / editor
+.vscode/
+.idea/
+
