@@ -6,12 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/tgogbera/google_keep_clone-backend/internal/config"
 	"github.com/tgogbera/google_keep_clone-backend/internal/database"
 	"github.com/tgogbera/google_keep_clone-backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var jwtSecret = []byte("your-secret-key-change-in-production")
 
 type Claims struct {
 	UserID uint   `json:"user_id"`
@@ -98,6 +97,7 @@ func Login(c *gin.Context) {
 }
 
 func generateToken(userID uint, email string) (string, error) {
+	cfg := config.Get()
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: userID,
@@ -109,11 +109,12 @@ func generateToken(userID uint, email string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return token.SignedString([]byte(cfg.JWTSecret))
 }
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		cfg := config.Get()
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
@@ -128,7 +129,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtSecret, nil
+			return []byte(cfg.JWTSecret), nil
 		})
 
 		if err != nil || !token.Valid {

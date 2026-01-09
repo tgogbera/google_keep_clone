@@ -5,10 +5,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/tgogbera/google_keep_clone-backend/internal/database"
+	"github.com/tgogbera/google_keep_clone-backend/internal/config"
 	"github.com/tgogbera/google_keep_clone-backend/internal/handlers"
 )
 
 func main() {
+	// Load configuration (based on environment variables)
+	config.Load()
+
 	// Initialize database
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
@@ -59,7 +63,9 @@ func main() {
 		})
 	}
 
-	if err := router.Run(":8080"); err != nil {
+	// Start server with configured port
+	addr := ":" + config.Get().Port
+	if err := router.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
