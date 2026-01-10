@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import '../storage/token_storage.dart';
+import '../../storage/token_storage.dart';
 
 /// Interceptor that automatically adds authentication token to requests
 class AuthInterceptor extends Interceptor {

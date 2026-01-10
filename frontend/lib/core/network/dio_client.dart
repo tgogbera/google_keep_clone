@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import '../config/api_config.dart';
-import '../interceptors/auth_interceptor.dart';
+import 'interceptors/auth_interceptor.dart';
 import '../storage/token_storage.dart';
 
 /// Factory for creating Dio instances with authentication interceptor
