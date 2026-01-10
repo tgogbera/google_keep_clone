@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/dio_client.dart';
@@ -14,7 +16,11 @@ void main() {
   // Register global BLoC observer for debugging and logging
   Bloc.observer = AppBlocObserver();
 
-  runApp(const MyApp());
+  // runApp(const MyApp());
+  runZonedGuarded(() => runApp(const MyApp()), (error, stackTrace) {
+    debugPrint('Error: $error');
+    debugPrint('StackTrace: $stackTrace');
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -24,17 +30,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Initialize core services
     final tokenStorage = TokenStorage();
-    final dioClient = DioClient(tokenStorage);
+    final apiClient = ApiClient();
 
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<TokenStorage>(create: (_) => tokenStorage),
-        RepositoryProvider<DioClient>(create: (_) => dioClient),
+        RepositoryProvider<ApiClient>(create: (_) => apiClient),
         RepositoryProvider<AuthRepository>(
-          create: (context) => AuthRepository(dio: context.read<DioClient>().dio),
+          create: (context) => AuthRepository(dio: context.read<ApiClient>().dio),
         ),
         RepositoryProvider<NoteRepository>(
-          create: (context) => NoteRepository(dio: context.read<DioClient>().dio),
+          create: (context) => NoteRepository(dio: context.read<ApiClient>().dio),
         ),
       ],
       child: MultiBlocProvider(
