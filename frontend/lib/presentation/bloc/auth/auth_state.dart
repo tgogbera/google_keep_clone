@@ -18,15 +18,13 @@ class AuthLoading extends AuthState {
 
 class AuthAuthenticated extends AuthState {
   final User user;
-  final String token;
 
   const AuthAuthenticated({
     required this.user,
-    required this.token,
   });
 
   @override
-  List<Object?> get props => [user, token];
+  List<Object?> get props => [user];
 }
 
 class AuthUnauthenticated extends AuthState {

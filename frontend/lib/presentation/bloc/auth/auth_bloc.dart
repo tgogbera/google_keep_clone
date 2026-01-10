@@ -1,19 +1,18 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../core/storage/token_storage.dart';
 import '../../../data/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
-  final FlutterSecureStorage _secureStorage;
-  static const String _tokenKey = 'auth_token';
+  final TokenStorage _tokenStorage;
 
   AuthBloc({
     required AuthRepository authRepository,
-    FlutterSecureStorage? secureStorage,
+    required TokenStorage tokenStorage,
   })  : _authRepository = authRepository,
-        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _tokenStorage = tokenStorage,
         super(const AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
@@ -32,15 +31,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.password,
       );
       
-      await _secureStorage.write(
-        key: _tokenKey,
-        value: authResponse.token,
-      );
+      // Store token in secure storage
+      await _tokenStorage.saveToken(authResponse.token);
 
-      emit(AuthAuthenticated(
-        user: authResponse.user,
-        token: authResponse.token,
-      ));
+      emit(AuthAuthenticated(user: authResponse.user));
     } catch (e) {
       emit(AuthError(e.toString().replaceFirst('Exception: ', '')));
     }
@@ -57,15 +51,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.password,
       );
       
-      await _secureStorage.write(
-        key: _tokenKey,
-        value: authResponse.token,
-      );
+      // Store token in secure storage
+      await _tokenStorage.saveToken(authResponse.token);
 
-      emit(AuthAuthenticated(
-        user: authResponse.user,
-        token: authResponse.token,
-      ));
+      emit(AuthAuthenticated(user: authResponse.user));
     } catch (e) {
       emit(AuthError(e.toString().replaceFirst('Exception: ', '')));
     }
@@ -75,7 +64,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _secureStorage.delete(key: _tokenKey);
+    await _tokenStorage.deleteToken();
     emit(const AuthUnauthenticated());
   }
 
@@ -85,7 +74,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
-      final token = await _secureStorage.read(key: _tokenKey);
+      final token = await _tokenStorage.getToken();
       
       if (token == null || token.isEmpty) {
         emit(const AuthUnauthenticated());
@@ -93,15 +82,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       // Verify token by fetching current user
-      final user = await _authRepository.getCurrentUser(token);
+      // The Dio interceptor will automatically add the token to the request
+      final user = await _authRepository.getCurrentUser();
       
-      emit(AuthAuthenticated(
-        user: user,
-        token: token,
-      ));
+      emit(AuthAuthenticated(user: user));
     } catch (e) {
       // Token is invalid or expired
-      await _secureStorage.delete(key: _tokenKey);
+      await _tokenStorage.deleteToken();
       emit(const AuthUnauthenticated());
     }
   }

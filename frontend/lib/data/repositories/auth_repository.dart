@@ -1,31 +1,20 @@
 import 'package:dio/dio.dart';
-import '../../core/config/api_config.dart';
 import '../models/auth_response.dart';
 import '../models/user.dart';
 
 class AuthRepository {
   final Dio _dio;
 
-  AuthRepository({Dio? dio}) : _dio = dio ?? Dio();
+  AuthRepository({required Dio dio}) : _dio = dio;
 
   Future<AuthResponse> register(String email, String password) async {
     try {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}/register',
-        data: {
-          'email': email,
-          'password': password,
-        },
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-        ),
-      );
+      final response = await _dio.post('/register', data: {'email': email, 'password': password});
 
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response != null) {
-        final errorMessage = e.response?.data['error'] as String? ?? 
-            'Registration failed';
+        final errorMessage = e.response?.data['error'] as String? ?? 'Registration failed';
         throw Exception(errorMessage);
       } else {
         throw Exception('Network error: ${e.message}');
@@ -35,22 +24,12 @@ class AuthRepository {
 
   Future<AuthResponse> login(String email, String password) async {
     try {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}/login',
-        data: {
-          'email': email,
-          'password': password,
-        },
-        options: Options(
-          headers: {'Content-Type': 'application/json'},
-        ),
-      );
+      final response = await _dio.post('/login', data: {'email': email, 'password': password});
 
       return AuthResponse.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response != null) {
-        final errorMessage = e.response?.data['error'] as String? ?? 
-            'Login failed';
+        final errorMessage = e.response?.data['error'] as String? ?? 'Login failed';
         throw Exception(errorMessage);
       } else {
         throw Exception('Network error: ${e.message}');
@@ -58,17 +37,9 @@ class AuthRepository {
     }
   }
 
-  Future<User> getCurrentUser(String token) async {
+  Future<User> getCurrentUser() async {
     try {
-      final response = await _dio.get(
-        '${ApiConfig.baseUrl}/me',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        ),
-      );
+      final response = await _dio.get('/me');
 
       // The /me endpoint returns {user_id, email}, so we'll create a minimal User
       return User(
@@ -79,8 +50,7 @@ class AuthRepository {
       );
     } on DioException catch (e) {
       if (e.response != null) {
-        final errorMessage = e.response?.data['error'] as String? ?? 
-            'Failed to get user';
+        final errorMessage = e.response?.data['error'] as String? ?? 'Failed to get user';
         throw Exception(errorMessage);
       } else {
         throw Exception('Network error: ${e.message}');

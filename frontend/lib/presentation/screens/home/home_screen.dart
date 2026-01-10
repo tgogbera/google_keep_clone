@@ -9,7 +9,7 @@ import '../../cubit/note/note_cubit.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void _showCreateNoteDialog(BuildContext context, String token) {
+  void _showCreateNoteDialog(BuildContext context) {
     final titleController = TextEditingController();
     final contentController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -83,7 +83,6 @@ class HomeScreen extends StatelessWidget {
                         : () {
                             if (formKey.currentState!.validate()) {
                               context.read<NoteCubit>().createNote(
-                                token,
                                 titleController.text.trim(),
                                 contentController.text.trim(),
                               );
@@ -166,7 +165,7 @@ class HomeScreen extends StatelessWidget {
         builder: (context, state) {
           if (state is AuthAuthenticated) {
             return FloatingActionButton(
-              onPressed: () => _showCreateNoteDialog(context, state.token),
+              onPressed: () => _showCreateNoteDialog(context),
               child: const Icon(Icons.add),
             );
           }

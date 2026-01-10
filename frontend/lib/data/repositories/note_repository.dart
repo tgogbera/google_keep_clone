@@ -1,26 +1,19 @@
 import 'package:dio/dio.dart';
-import '../../core/config/api_config.dart';
 import '../models/note.dart';
 
 class NoteRepository {
   final Dio _dio;
 
-  NoteRepository({Dio? dio}) : _dio = dio ?? Dio();
+  NoteRepository({required Dio dio}) : _dio = dio;
 
-  Future<Note> createNote(String token, String title, String content) async {
+  Future<Note> createNote(String title, String content) async {
     try {
       final response = await _dio.post(
-        '${ApiConfig.baseUrl}/notes',
+        '/notes',
         data: {
           'title': title,
           'content': content,
         },
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        ),
       );
 
       return Note.fromJson(response.data);

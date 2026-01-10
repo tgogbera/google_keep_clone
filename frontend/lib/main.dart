@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'core/network/dio_client.dart';
+import 'core/storage/token_storage.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/note_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
@@ -16,13 +18,19 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Initialize core services
+    final tokenStorage = TokenStorage();
+    final dioClient = DioClient(tokenStorage);
+
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<TokenStorage>(create: (_) => tokenStorage),
+        RepositoryProvider<DioClient>(create: (_) => dioClient),
         RepositoryProvider<AuthRepository>(
-          create: (context) => AuthRepository(),
+          create: (context) => AuthRepository(dio: context.read<DioClient>().dio),
         ),
         RepositoryProvider<NoteRepository>(
-          create: (context) => NoteRepository(),
+          create: (context) => NoteRepository(dio: context.read<DioClient>().dio),
         ),
       ],
       child: MultiBlocProvider(
@@ -30,12 +38,11 @@ class MyApp extends StatelessWidget {
           BlocProvider<AuthBloc>(
             create: (context) => AuthBloc(
               authRepository: context.read<AuthRepository>(),
+              tokenStorage: context.read<TokenStorage>(),
             )..add(const AuthCheckRequested()),
           ),
           BlocProvider<NoteCubit>(
-            create: (context) => NoteCubit(
-              noteRepository: context.read<NoteRepository>(),
-            ),
+            create: (context) => NoteCubit(noteRepository: context.read<NoteRepository>()),
           ),
         ],
         child: Builder(

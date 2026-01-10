@@ -9,13 +9,13 @@ class NoteCubit extends Cubit<NoteState> {
   final NoteRepository _noteRepository;
 
   NoteCubit({required NoteRepository noteRepository})
-      : _noteRepository = noteRepository,
-        super(const NoteInitial());
+    : _noteRepository = noteRepository,
+      super(const NoteInitial());
 
-  Future<void> createNote(String token, String title, String content) async {
+  Future<void> createNote(String title, String content) async {
     emit(const NoteLoading());
     try {
-      final note = await _noteRepository.createNote(token, title, content);
+      final note = await _noteRepository.createNote(title, content);
       emit(NoteSuccess(note: note));
     } catch (e) {
       emit(NoteError(e.toString()));
