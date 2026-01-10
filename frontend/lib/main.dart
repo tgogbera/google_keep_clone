@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/network/dio_client.dart';
+import 'core/observers/app_bloc_observer.dart';
 import 'core/storage/token_storage.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/note_repository.dart';
@@ -10,6 +11,9 @@ import 'presentation/cubit/note/note_cubit.dart';
 import 'presentation/router/app_router.dart';
 
 void main() {
+  // Register global BLoC observer for debugging and logging
+  Bloc.observer = AppBlocObserver();
+
   runApp(const MyApp());
 }
 
