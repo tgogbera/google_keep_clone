@@ -32,8 +32,8 @@ func InitDB() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Run migrations
-	if err := DB.AutoMigrate(&models.User{}, &models.Note{}); err != nil {
+	// Run migrations (including refresh tokens for session management)
+	if err := DB.AutoMigrate(&models.User{}, &models.Note{}, &models.RefreshToken{}); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 

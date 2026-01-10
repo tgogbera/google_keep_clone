@@ -47,6 +47,8 @@ func main() {
 	{
 		api.POST("/register", handlers.Register)
 		api.POST("/login", handlers.Login)
+		api.POST("/refresh", handlers.Refresh)
+		api.POST("/logout", handlers.Logout)
 	}
 
 	// Protected routes example

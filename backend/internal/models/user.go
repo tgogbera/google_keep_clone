@@ -39,6 +39,8 @@ func (u *User) ToDTO() UserDTO {
 }
 
 type AuthResponse struct {
-	Token string  `json:"token"`
-	User  UserDTO `json:"user"`
+	// Token is the access token (kept for backward compatibility).
+	Token        string  `json:"token"`
+	RefreshToken string  `json:"refresh_token,omitempty"`
+	User         UserDTO `json:"user"`
 }
