@@ -16,3 +16,8 @@ type CreateNoteRequest struct {
 	Title   string `json:"title" binding:"required"`
 	Content string `json:"content"`
 }
+
+type UpdateNoteRequest struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}

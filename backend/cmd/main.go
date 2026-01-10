@@ -64,6 +64,9 @@ func main() {
 
 		// Note routes
 		protected.POST("/notes", handlers.CreateNote)
+		protected.GET("/notes", handlers.GetAllNotes)
+		protected.PUT("/notes/:id", handlers.UpdateNote)
+		protected.DELETE("/notes/:id", handlers.DeleteNote)
 	}
 
 	// Start server with configured port
