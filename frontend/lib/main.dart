@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/note_repository.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/bloc/auth/auth_event.dart';
+import 'presentation/cubit/note/note_cubit.dart';
 import 'presentation/router/app_router.dart';
 
 void main() {
@@ -19,6 +21,9 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<AuthRepository>(
           create: (context) => AuthRepository(),
         ),
+        RepositoryProvider<NoteRepository>(
+          create: (context) => NoteRepository(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -26,6 +31,11 @@ class MyApp extends StatelessWidget {
             create: (context) => AuthBloc(
               authRepository: context.read<AuthRepository>(),
             )..add(const AuthCheckRequested()),
+          ),
+          BlocProvider<NoteCubit>(
+            create: (context) => NoteCubit(
+              noteRepository: context.read<NoteRepository>(),
+            ),
           ),
         ],
         child: Builder(

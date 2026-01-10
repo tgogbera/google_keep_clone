@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tgogbera/google_keep_clone-backend/internal/database"
 	"github.com/tgogbera/google_keep_clone-backend/internal/config"
+	"github.com/tgogbera/google_keep_clone-backend/internal/database"
 	"github.com/tgogbera/google_keep_clone-backend/internal/handlers"
 )
 
@@ -61,6 +61,9 @@ func main() {
 				"email":   email,
 			})
 		})
+
+		// Note routes
+		protected.POST("/notes", handlers.CreateNote)
 	}
 
 	// Start server with configured port

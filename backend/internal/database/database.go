@@ -33,7 +33,7 @@ func InitDB() error {
 	}
 
 	// Run migrations
-	if err := DB.AutoMigrate(&models.User{}); err != nil {
+	if err := DB.AutoMigrate(&models.User{}, &models.Note{}); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
