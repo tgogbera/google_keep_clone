@@ -58,7 +58,7 @@ func Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, models.AuthResponse{
 		Token: token,
-		User:  user,
+		User:  user.ToDTO(),
 	})
 }
 
@@ -92,7 +92,7 @@ func Login(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models.AuthResponse{
 		Token: token,
-		User:  user,
+		User:  user.ToDTO(),
 	})
 }
 

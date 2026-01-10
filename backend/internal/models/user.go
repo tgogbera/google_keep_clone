@@ -20,7 +20,25 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// UserDTO represents a user data transfer object without sensitive information
+type UserDTO struct {
+	ID        uint      `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ToDTO converts a User model to UserDTO
+func (u *User) ToDTO() UserDTO {
+	return UserDTO{
+		ID:        u.ID,
+		Email:     u.Email,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
+}
+
 type AuthResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
+	Token string  `json:"token"`
+	User  UserDTO `json:"user"`
 }
