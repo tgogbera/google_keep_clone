@@ -4,12 +4,7 @@ class User {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  User({
-    required this.id,
-    required this.email,
-    required this.createdAt,
-    required this.updatedAt,
-  });
+  User({required this.id, required this.email, required this.createdAt, required this.updatedAt});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(

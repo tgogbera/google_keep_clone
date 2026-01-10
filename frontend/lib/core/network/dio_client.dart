@@ -1,19 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:frontend/core/network/exceptions/api_exceptions.dart';
 import '../config/api_config.dart';
 import 'interceptors/auth_interceptor.dart';
 import '../storage/token_storage.dart';
-
-/// Custom exception used across the app
-class ApiException implements Exception {
-  final int? statusCode;
-  final String message;
-
-  ApiException({required this.message, this.statusCode});
-
-  @override
-  String toString() => 'ApiException($statusCode): $message';
-}
 
 /// Singleton API client for making HTTP requests
 /// Handles authentication, error handling, and logging
@@ -207,8 +197,24 @@ class ApiClient {
   /// -------------------------
 
   ApiException _handleError(DioException error) {
+    // Handle timeout errors
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      return RequestTimeoutException(
+        message: 'Connection timeout. Please check your internet connection.',
+      );
+    }
+
+    // Handle connection errors
+    if (error.type == DioExceptionType.connectionError) {
+      return UnknownApiException(
+        message: 'Connection error. Please check your internet connection.',
+      );
+    }
+
+    // Handle server response errors
     if (error.response != null) {
-      // Server responded with error status
       final statusCode = error.response!.statusCode;
       final data = error.response!.data;
 
@@ -224,16 +230,35 @@ class ApiClient {
         message = 'Request failed with status $statusCode';
       }
 
-      return ApiException(statusCode: statusCode, message: message);
-    } else if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout) {
-      return ApiException(message: 'Connection timeout. Please check your internet connection.');
-    } else if (error.type == DioExceptionType.connectionError) {
-      return ApiException(message: 'Connection error. Please check your internet connection.');
-    } else {
-      return ApiException(message: error.message ?? 'An unexpected error occurred');
+      // Map status codes to specific exception types
+      switch (statusCode) {
+        case 400:
+          return BadRequestException(message: message);
+        case 401:
+          return UnauthorizedException(message: message);
+        case 403:
+          return ForbiddenException(message: message);
+        case 404:
+          return NotFoundException(message: message);
+        case 408:
+          return RequestTimeoutException(message: message);
+        case 409:
+          return ConflictException(message: message);
+        case 422:
+          return UnprocessableEntityException(message: message);
+        case 429:
+          return TooManyRequestsException(message: message);
+        case 500:
+          return InternalServerErrorException(message: message);
+        case 503:
+          return ServiceUnavailableException(message: message);
+        default:
+          return UnknownApiException(statusCode: statusCode, message: message);
+      }
     }
+
+    // Handle other errors
+    return UnknownApiException(message: error.message ?? 'An unexpected error occurred');
   }
 
   /// -------------------------

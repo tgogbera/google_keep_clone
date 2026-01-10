@@ -7,7 +7,7 @@ class TokenStorage {
   final FlutterSecureStorage _secureStorage;
 
   TokenStorage({FlutterSecureStorage? secureStorage})
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   /// Save authentication token
   Future<void> saveToken(String token) async {

@@ -28,11 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
-            AuthLoginRequested(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+        AuthLoginRequested(email: _emailController.text.trim(), password: _passwordController.text),
+      );
     }
   }
 
@@ -42,12 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: Colors.red));
           } else if (state is AuthAuthenticated) {
             // Navigate to home on successful login
             context.go('/home');
@@ -67,18 +61,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Logo or App Name
-                      Icon(
-                        Icons.note_alt,
-                        size: 80,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                      Icon(Icons.note_alt, size: 80, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(height: 16),
                       Text(
                         'Google Keep Clone',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 48),
 
@@ -145,9 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: isLoading
                             ? const SizedBox(
@@ -155,15 +143,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : const Text(
-                                'Login',
-                                style: TextStyle(fontSize: 16),
-                              ),
+                            : const Text('Login', style: TextStyle(fontSize: 16)),
                       ),
                       const SizedBox(height: 16),
 
