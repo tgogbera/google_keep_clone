@@ -12,32 +12,32 @@ class ApiClient {
 
   ApiClient._internal() {
     final baseUrl = ApiConfig.baseUrl;
-
     assert(baseUrl.isNotEmpty, 'API base URL must be set');
 
     final options = BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30), // Missing in original
       headers: const {'Content-Type': 'application/json'},
+      validateStatus: (status) => status != null, // Handle all status codes
     );
 
     _dio = Dio(options);
+    _setupInterceptors();
+  }
 
-    // Add auth interceptor
+  static final ApiClient _instance = ApiClient._internal();
+  static final TokenStorage _tokenStorage = TokenStorage();
+
+  late final Dio _dio;
+
+  /// Get the underlying Dio instance (for backward compatibility)
+  Dio get dio => _dio;
+
+  void _setupInterceptors() {
+    // Add auth interceptor first (runs before others)
     _dio.interceptors.add(AuthInterceptor(_tokenStorage));
-
-    // Add logging interceptor for debug mode
-    if (!kReleaseMode) {
-      _dio.interceptors.add(
-        LogInterceptor(
-          requestBody: true,
-          responseBody: true,
-          requestHeader: true,
-          responseHeader: false,
-        ),
-      );
-    }
 
     // Add request/response logging interceptor
     _dio.interceptors.add(
@@ -56,19 +56,51 @@ class ApiClient {
         },
       ),
     );
+
+    // Add debug logging interceptor last (least intrusive)
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        LogInterceptor(
+          requestBody: true,
+          responseBody: true,
+          requestHeader: true,
+          responseHeader: false,
+          logPrint: (obj) => debugPrint(obj.toString()),
+        ),
+      );
+    }
   }
-
-  static final ApiClient _instance = ApiClient._internal();
-  static final TokenStorage _tokenStorage = TokenStorage();
-
-  late final Dio _dio;
-
-  /// Get the underlying Dio instance (for backward compatibility)
-  Dio get dio => _dio;
 
   /// -------------------------
   /// HTTP METHODS
   /// -------------------------
+
+  /// Generic request method to reduce code duplication
+  Future<T> _request<T>(
+    String method,
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    try {
+      final response = await _dio.request<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: (options ?? Options()).copyWith(method: method),
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
+      );
+      return response.data as T;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
 
   /// GET request
   Future<T> get<T>(
@@ -77,20 +109,14 @@ class ApiClient {
     Options? options,
     CancelToken? cancelToken,
     ProgressCallback? onReceiveProgress,
-  }) async {
-    try {
-      final response = await _dio.get<T>(
-        path,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-        onReceiveProgress: onReceiveProgress,
-      );
-      return response.data as T;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  }) => _request<T>(
+    'GET',
+    path,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+    onReceiveProgress: onReceiveProgress,
+  );
 
   /// POST request
   Future<T> post<T>(
@@ -101,22 +127,16 @@ class ApiClient {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
-  }) async {
-    try {
-      final response = await _dio.post<T>(
-        path,
-        data: data,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-        onSendProgress: onSendProgress,
-        onReceiveProgress: onReceiveProgress,
-      );
-      return response.data as T;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  }) => _request<T>(
+    'POST',
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+    onSendProgress: onSendProgress,
+    onReceiveProgress: onReceiveProgress,
+  );
 
   /// PUT request
   Future<T> put<T>(
@@ -127,22 +147,16 @@ class ApiClient {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
-  }) async {
-    try {
-      final response = await _dio.put<T>(
-        path,
-        data: data,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-        onSendProgress: onSendProgress,
-        onReceiveProgress: onReceiveProgress,
-      );
-      return response.data as T;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  }) => _request<T>(
+    'PUT',
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+    onSendProgress: onSendProgress,
+    onReceiveProgress: onReceiveProgress,
+  );
 
   /// PATCH request
   Future<T> patch<T>(
@@ -153,22 +167,16 @@ class ApiClient {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
-  }) async {
-    try {
-      final response = await _dio.patch<T>(
-        path,
-        data: data,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-        onSendProgress: onSendProgress,
-        onReceiveProgress: onReceiveProgress,
-      );
-      return response.data as T;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  }) => _request<T>(
+    'PATCH',
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+    onSendProgress: onSendProgress,
+    onReceiveProgress: onReceiveProgress,
+  );
 
   /// DELETE request
   Future<T> delete<T>(
@@ -177,20 +185,14 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
-  }) async {
-    try {
-      final response = await _dio.delete<T>(
-        path,
-        data: data,
-        queryParameters: queryParameters,
-        options: options,
-        cancelToken: cancelToken,
-      );
-      return response.data as T;
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
+  }) => _request<T>(
+    'DELETE',
+    path,
+    data: data,
+    queryParameters: queryParameters,
+    options: options,
+    cancelToken: cancelToken,
+  );
 
   /// -------------------------
   /// ERROR HANDLING
@@ -218,47 +220,39 @@ class ApiClient {
       final statusCode = error.response!.statusCode;
       final data = error.response!.data;
 
-      String message;
-      if (data is Map<String, dynamic>) {
-        message =
-            data['error'] as String? ??
-            data['message'] as String? ??
-            'Request failed with status $statusCode';
-      } else if (data is String) {
-        message = data;
-      } else {
-        message = 'Request failed with status $statusCode';
-      }
+      final message = _extractErrorMessage(data, statusCode);
 
       // Map status codes to specific exception types
-      switch (statusCode) {
-        case 400:
-          return BadRequestException(message: message);
-        case 401:
-          return UnauthorizedException(message: message);
-        case 403:
-          return ForbiddenException(message: message);
-        case 404:
-          return NotFoundException(message: message);
-        case 408:
-          return RequestTimeoutException(message: message);
-        case 409:
-          return ConflictException(message: message);
-        case 422:
-          return UnprocessableEntityException(message: message);
-        case 429:
-          return TooManyRequestsException(message: message);
-        case 500:
-          return InternalServerErrorException(message: message);
-        case 503:
-          return ServiceUnavailableException(message: message);
-        default:
-          return UnknownApiException(statusCode: statusCode, message: message);
-      }
+      return switch (statusCode) {
+        400 => BadRequestException(message: message),
+        401 => UnauthorizedException(message: message),
+        403 => ForbiddenException(message: message),
+        404 => NotFoundException(message: message),
+        408 => RequestTimeoutException(message: message),
+        409 => ConflictException(message: message),
+        422 => UnprocessableEntityException(message: message),
+        429 => TooManyRequestsException(message: message),
+        500 => InternalServerErrorException(message: message),
+        503 => ServiceUnavailableException(message: message),
+        _ => UnknownApiException(statusCode: statusCode, message: message),
+      };
     }
 
     // Handle other errors
     return UnknownApiException(message: error.message ?? 'An unexpected error occurred');
+  }
+
+  /// Extract error message from various response formats
+  String _extractErrorMessage(dynamic data, int? statusCode) {
+    if (data is Map<String, dynamic>) {
+      return data['error'] as String? ??
+          data['message'] as String? ??
+          data['msg'] as String? ?? // Common alternative
+          'Request failed with status $statusCode';
+    } else if (data is String && data.isNotEmpty) {
+      return data;
+    }
+    return 'Request failed with status $statusCode';
   }
 
   /// -------------------------
@@ -267,27 +261,37 @@ class ApiClient {
 
   void _logRequest(RequestOptions options) {
     if (kDebugMode) {
-      debugPrint('REQUEST[${options.method}] => ${options.uri}');
+      debugPrint('📤 REQUEST[${options.method}] => ${options.uri}');
       if (options.data != null) {
-        debugPrint('Request Data: ${options.data}');
+        debugPrint('   Body: ${_truncateLog(options.data.toString())}');
+      }
+      if (options.queryParameters.isNotEmpty) {
+        debugPrint('   Params: ${options.queryParameters}');
       }
     }
   }
 
   void _logResponse(Response response) {
     if (kDebugMode) {
-      debugPrint('RESPONSE[${response.statusCode}] => ${response.requestOptions.uri}');
+      final emoji = response.statusCode! < 400 ? '📥' : '⚠️ ';
+      debugPrint('$emoji RESPONSE[${response.statusCode}] => ${response.requestOptions.uri}');
     }
   }
 
   void _logError(DioException error) {
     if (kDebugMode) {
-      debugPrint('ERROR[${error.response?.statusCode}] => ${error.requestOptions.uri}');
-      debugPrint('Error Message: ${error.message}');
+      debugPrint('❌ ERROR[${error.response?.statusCode}] => ${error.requestOptions.uri}');
+      debugPrint('   Message: ${error.message}');
       if (error.response?.data != null) {
-        debugPrint('Error Data: ${error.response?.data}');
+        debugPrint('   Data: ${_truncateLog(error.response?.data.toString() ?? '')}');
       }
     }
+  }
+
+  /// Truncate long log messages for readability
+  String _truncateLog(String log, {int maxLength = 500}) {
+    if (log.length <= maxLength) return log;
+    return '${log.substring(0, maxLength)}...';
   }
 
   /// Clear the Dio instance (useful for testing or reconfiguration)

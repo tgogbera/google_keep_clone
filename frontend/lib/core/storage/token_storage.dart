@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Uses secure storage to persist tokens across app restarts
 class TokenStorage {
   static const String _tokenKey = 'auth_token';
+  static const String _refreshTokenKey = 'refresh_token';
   final FlutterSecureStorage _secureStorage;
 
   TokenStorage({FlutterSecureStorage? secureStorage})
@@ -22,6 +23,21 @@ class TokenStorage {
   /// Delete authentication token
   Future<void> deleteToken() async {
     await _secureStorage.delete(key: _tokenKey);
+  }
+
+  /// Save refresh token (optional, used as fallback if cookie isn't available)
+  Future<void> saveRefreshToken(String refreshToken) async {
+    await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
+  }
+
+  /// Retrieve refresh token
+  Future<String?> getRefreshToken() async {
+    return await _secureStorage.read(key: _refreshTokenKey);
+  }
+
+  /// Delete refresh token
+  Future<void> deleteRefreshToken() async {
+    await _secureStorage.delete(key: _refreshTokenKey);
   }
 
   /// Check if token exists

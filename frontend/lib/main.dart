@@ -2,15 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 import 'core/network/dio_client.dart';
 import 'core/observers/app_bloc_observer.dart';
 import 'core/storage/token_storage.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/note_repository.dart';
-import 'presentation/bloc/auth/auth_bloc.dart';
-import 'presentation/bloc/auth/auth_event.dart';
 import 'presentation/cubit/note/note_cubit.dart';
-import 'presentation/router/app_router.dart';
+import 'core/router/app_router.dart';
 
 void main() {
   // Register global BLoC observer for debugging and logging
@@ -37,7 +36,10 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<TokenStorage>(create: (_) => tokenStorage),
         RepositoryProvider<ApiClient>(create: (_) => apiClient),
         RepositoryProvider<AuthRepository>(
-          create: (context) => AuthRepository(dio: context.read<ApiClient>().dio),
+          create: (context) => AuthRepository(
+            dio: context.read<ApiClient>().dio,
+            tokenStorage: context.read<TokenStorage>(),
+          ),
         ),
         RepositoryProvider<NoteRepository>(
           create: (context) => NoteRepository(dio: context.read<ApiClient>().dio),
@@ -45,11 +47,11 @@ class MyApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<AuthBloc>(
-            create: (context) => AuthBloc(
+          BlocProvider<AuthCubit>(
+            create: (context) => AuthCubit(
               authRepository: context.read<AuthRepository>(),
               tokenStorage: context.read<TokenStorage>(),
-            )..add(const AuthCheckRequested()),
+            )..checkAuthStatus(),
           ),
           BlocProvider<NoteCubit>(
             create: (context) => NoteCubit(noteRepository: context.read<NoteRepository>()),

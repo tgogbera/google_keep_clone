@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/auth/auth_bloc.dart';
+import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 
 /// A ChangeNotifier that listens to AuthBloc state changes
 /// and notifies GoRouter to refresh its redirect logic
 class AuthRefreshStream extends ChangeNotifier {
   AuthRefreshStream(BuildContext context) {
-    _subscription = context.read<AuthBloc>().stream.listen((_) {
+    _subscription = context.read<AuthCubit>().stream.listen((_) {
       notifyListeners();
     });
   }

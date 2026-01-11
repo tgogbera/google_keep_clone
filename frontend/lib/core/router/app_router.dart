@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/auth/auth_bloc.dart';
-import '../bloc/auth/auth_state.dart';
-import '../screens/login/login_screen.dart';
-import '../screens/register/register_screen.dart';
-import '../screens/home/home_screen.dart';
+import '../../presentation/screens/login/login_screen.dart';
+import '../../presentation/screens/register/register_screen.dart';
+import '../../presentation/screens/home/home_screen.dart';
 import 'auth_refresh_stream.dart';
 
 class AppRouter {
   static String? _redirect(BuildContext context, GoRouterState state) {
-    final authBloc = context.read<AuthBloc>();
+    final authBloc = context.read<AuthCubit>();
     final authState = authBloc.state;
     final isLoginRoute = state.matchedLocation == '/login';
     final isRegisterRoute = state.matchedLocation == '/register';

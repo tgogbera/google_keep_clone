@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 import 'package:go_router/go_router.dart';
-import '../../bloc/auth/auth_bloc.dart';
-import '../../bloc/auth/auth_event.dart';
-import '../../bloc/auth/auth_state.dart';
 import '../../cubit/note/note_cubit.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -111,7 +109,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Notes'),
         actions: [
-          BlocBuilder<AuthBloc, AuthState>(
+          BlocBuilder<AuthCubit, AuthState>(
             builder: (context, state) {
               if (state is AuthAuthenticated) {
                 return PopupMenuButton(
@@ -121,7 +119,7 @@ class HomeScreen extends StatelessWidget {
                     const PopupMenuDivider(),
                     PopupMenuItem(
                       onTap: () {
-                        context.read<AuthBloc>().add(const AuthLogoutRequested());
+                        context.read<AuthCubit>().logout();
                         context.go('/login');
                       },
                       child: const Row(
@@ -136,7 +134,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<AuthBloc, AuthState>(
+      body: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
           if (state is AuthAuthenticated) {
             return Center(
@@ -161,7 +159,7 @@ class HomeScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         },
       ),
-      floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
+      floatingActionButton: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
           if (state is AuthAuthenticated) {
             return FloatingActionButton(
