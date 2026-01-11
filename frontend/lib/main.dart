@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
-import 'core/network/dio_client.dart';
+import 'core/network/api_client.dart';
 import 'core/observers/app_bloc_observer.dart';
 import 'core/storage/token_storage.dart';
 import 'data/repositories/auth_repository.dart';
@@ -35,13 +35,10 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<TokenStorage>(create: (_) => tokenStorage),
         RepositoryProvider<ApiClient>(create: (_) => apiClient),
         RepositoryProvider<AuthRepository>(
-          create: (context) => AuthRepository(
-            dio: context.read<ApiClient>().dio,
-            tokenStorage: context.read<TokenStorage>(),
-          ),
+          create: (context) => AuthRepository(apiClient: context.read<ApiClient>()),
         ),
         RepositoryProvider<NoteRepository>(
-          create: (context) => NoteRepository(dio: context.read<ApiClient>().dio),
+          create: (context) => NoteRepository(apiClient: context.read<ApiClient>()),
         ),
       ],
       child: MultiBlocProvider(

@@ -32,6 +32,8 @@ class AuthCubit extends Cubit<AuthState> {
     } on UnauthorizedException catch (_) {
       await _clearAuthData();
       emit(const AuthUnauthenticated());
+    } on ApiException catch (e) {
+      emit(AuthError(message: e.message));
     } catch (e) {
       emit(AuthError(message: _formatErrorMessage(e)));
     }
@@ -44,6 +46,10 @@ class AuthCubit extends Cubit<AuthState> {
       final authResponse = await _authRepository.login(email, password);
       await _saveAuthTokens(authResponse);
       emit(AuthAuthenticated(user: authResponse.user));
+    } on UnauthorizedException {
+      emit(const AuthError(message: 'Invalid email or password'));
+    } on RequestTimeoutException {
+      emit(const AuthError(message: 'Network timeout. Please check your connection.'));
     } on ApiException catch (e) {
       emit(AuthError(message: e.message));
     } catch (e) {
@@ -58,6 +64,12 @@ class AuthCubit extends Cubit<AuthState> {
       final authResponse = await _authRepository.register(email, password);
       await _saveAuthTokens(authResponse);
       emit(AuthAuthenticated(user: authResponse.user));
+    } on ConflictException {
+      emit(const AuthError(message: 'Email already registered'));
+    } on BadRequestException {
+      emit(const AuthError(message: 'Invalid email or password format'));
+    } on RequestTimeoutException {
+      emit(const AuthError(message: 'Network timeout. Please check your connection.'));
     } on ApiException catch (e) {
       emit(AuthError(message: e.message));
     } catch (e) {
@@ -71,24 +83,26 @@ class AuthCubit extends Cubit<AuthState> {
       await _authRepository.logout();
     } catch (e) {
       _logError('Server logout failed: $e');
+    } finally {
+      await _clearAuthData();
+      emit(const AuthUnauthenticated());
     }
-
-    await _clearAuthData();
-    emit(const AuthUnauthenticated());
   }
 
+  /// Save tokens from auth response
   Future<void> _saveAuthTokens(dynamic authResponse) async {
-    await Future.wait([
-      _tokenStorage.saveToken(authResponse.token),
-      if (authResponse.refreshToken != null)
-        _tokenStorage.saveRefreshToken(authResponse.refreshToken),
-    ]);
+    await _tokenStorage.saveToken(authResponse.token);
+    if (authResponse.refreshToken != null) {
+      await _tokenStorage.saveRefreshToken(authResponse.refreshToken);
+    }
   }
 
+  /// Clear all auth data on logout or auth failure
   Future<void> _clearAuthData() async {
     await Future.wait([_tokenStorage.deleteToken(), _tokenStorage.deleteRefreshToken()]);
   }
 
+  /// Format error messages for display
   String _formatErrorMessage(dynamic error) {
     if (error is ApiException) return error.message;
     if (error is Exception) {
