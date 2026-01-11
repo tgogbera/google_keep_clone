@@ -77,21 +77,6 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthUnauthenticated());
   }
 
-  /// Refresh token (called by auth interceptor or manually)
-  Future<void> refreshToken() async {
-    if (state is! AuthAuthenticated) return;
-
-    try {
-      final user = await _authRepository.getCurrentUser();
-      emit(AuthAuthenticated(user: user));
-    } catch (e) {
-      await _clearAuthData();
-      emit(const AuthUnauthenticated());
-    }
-  }
-
-  // --- Private helpers ---
-
   Future<void> _saveAuthTokens(dynamic authResponse) async {
     await Future.wait([
       _tokenStorage.saveToken(authResponse.token),

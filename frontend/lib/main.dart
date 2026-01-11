@@ -15,7 +15,6 @@ void main() {
   // Register global BLoC observer for debugging and logging
   Bloc.observer = AppBlocObserver();
 
-  // runApp(const MyApp());
   runZonedGuarded(() => runApp(const MyApp()), (error, stackTrace) {
     debugPrint('Error: $error');
     debugPrint('StackTrace: $stackTrace');
@@ -62,10 +61,7 @@ class MyApp extends StatelessWidget {
             return MaterialApp.router(
               title: 'Google Keep Clone',
               debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-                useMaterial3: true,
-              ),
+              theme: ThemeData.dark(useMaterial3: true),
               routerConfig: AppRouter.createRouter(context),
             );
           },

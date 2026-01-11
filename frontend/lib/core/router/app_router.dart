@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../presentation/screens/login/login_screen.dart';
 import '../../presentation/screens/register/register_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
-import 'auth_refresh_stream.dart';
 
 class AppRouter {
   static String? _redirect(BuildContext context, GoRouterState state) {
@@ -28,11 +27,8 @@ class AppRouter {
   }
 
   static GoRouter createRouter(BuildContext context) {
-    final authRefreshStream = AuthRefreshStream(context);
-
     return GoRouter(
       initialLocation: '/login',
-      refreshListenable: authRefreshStream,
       redirect: _redirect,
       routes: [
         GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),

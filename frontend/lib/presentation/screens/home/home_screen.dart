@@ -109,66 +109,42 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Notes'),
         actions: [
-          BlocBuilder<AuthCubit, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) {
-                return PopupMenuButton(
-                  icon: CircleAvatar(child: Text(state.user.email[0].toUpperCase())),
-                  itemBuilder: (context) => <PopupMenuEntry>[
-                    PopupMenuItem(enabled: false, child: Text('Signed in as ${state.user.email}')),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      onTap: () {
-                        context.read<AuthCubit>().logout();
-                        context.go('/login');
-                      },
-                      child: const Row(
-                        children: [Icon(Icons.logout), SizedBox(width: 8), Text('Logout')],
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
+          PopupMenuButton(
+            icon: CircleAvatar(),
+            itemBuilder: (context) => <PopupMenuEntry>[
+              PopupMenuItem(enabled: false, child: Text('Signed in!')),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                onTap: () {
+                  context.read<AuthCubit>().logout();
+                  context.go('/login');
+                },
+                child: const Row(
+                  children: [Icon(Icons.logout), SizedBox(width: 8), Text('Logout')],
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.note_alt, size: 64, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Welcome, ${state.user.email}!',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap the + button to create your first note',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-            );
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.note_alt, size: 64, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 16),
+            Text('Welcome!', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Text(
+              'Tap the + button to create your first note',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return FloatingActionButton(
-              onPressed: () => _showCreateNoteDialog(context),
-              child: const Icon(Icons.add),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showCreateNoteDialog(context),
+        child: const Icon(Icons.add),
       ),
     );
   }
