@@ -18,7 +18,6 @@ class ApiClient {
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
-      sendTimeout: const Duration(seconds: 30), // Missing in original
       headers: const {'Content-Type': 'application/json'},
       validateStatus: (status) => status != null, // Handle all status codes
     );
@@ -87,11 +86,18 @@ class ApiClient {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
+      final optionsWithTimeout = (options ?? Options()).copyWith(
+        method: method,
+        // sendTimeout is only meaningful when there's a request body to send (e.g., POST/PUT/PATCH)
+        // Avoid setting it on requests without a body (like GET) to prevent web adapter warnings.
+        sendTimeout: data != null ? const Duration(seconds: 30) : null,
+      );
+
       final response = await _dio.request<T>(
         path,
         data: data,
         queryParameters: queryParameters,
-        options: (options ?? Options()).copyWith(method: method),
+        options: optionsWithTimeout,
         cancelToken: cancelToken,
         onSendProgress: onSendProgress,
         onReceiveProgress: onReceiveProgress,

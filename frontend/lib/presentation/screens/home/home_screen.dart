@@ -18,15 +18,8 @@ class HomeScreen extends StatelessWidget {
         value: context.read<NoteCubit>(),
         child: BlocListener<NoteCubit, NoteState>(
           listener: (context, state) {
-            if (state is NoteSuccess) {
+            if (state is NoteCreated) {
               Navigator.of(dialogContext).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Note created successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              context.read<NoteCubit>().reset();
             } else if (state is NoteError) {
               ScaffoldMessenger.of(
                 context,
@@ -128,18 +121,77 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.note_alt, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text('Welcome!', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text(
-              'Tap the + button to create your first note',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            mainAxisAlignment: .center,
+            children: [
+              BlocConsumer<NoteCubit, NoteState>(
+                listener: (context, state) {
+                  if (state is NoteCreated) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Note created successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    context.read<NoteCubit>().fetchNotes();
+                  }
+                  if (state is NoteUpdated) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Note updated successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    context.read<NoteCubit>().fetchNotes();
+                  }
+
+                  if (state is NoteDeleted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Note deleted successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    context.read<NoteCubit>().fetchNotes();
+                  }
+                },
+                builder: (context, state) {
+                  if (state is NoteInitial || state is NoteLoading) {
+                    return Center(child: const CircularProgressIndicator());
+                  }
+
+                  if (state is NotesLoaded) {
+                    final notes = state.notes;
+                    if (notes.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'No notes available. Tap the + button to create your first note.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                        ),
+                      );
+                    }
+
+                    return Expanded(
+                      child: ListView.builder(
+                        itemCount: notes.length,
+                        itemBuilder: (context, index) {
+                          final note = notes[index];
+                          return Card(child: ListTile(title: Text(note.title)));
+                        },
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

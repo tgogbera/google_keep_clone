@@ -15,14 +15,33 @@ class NoteLoading extends NoteState {
   const NoteLoading();
 }
 
-class NoteSuccess extends NoteState {
-  final Note note;
+class NoteCreated extends NoteState {
+  const NoteCreated();
+}
 
-  const NoteSuccess({required this.note});
+class NoteUpdated extends NoteState {
+  const NoteUpdated();
+}
+
+class NotesLoaded extends NoteState {
+  final List<Note> notes;
+
+  const NotesLoaded({required this.notes});
 
   @override
-  List<Object?> get props => [note];
+  List<Object?> get props => [notes];
 }
+
+class NoteDeleted extends NoteState {
+  const NoteDeleted();
+}
+
+class EmpntyNotes extends NoteState {
+  const EmpntyNotes();
+}
+
+
+
 
 class NoteError extends NoteState {
   final String message;
