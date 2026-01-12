@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:frontend/core/config/api_config.dart';
 import 'package:frontend/core/network/exceptions/api_exceptions.dart';
-import '../config/api_config.dart';
+import 'package:frontend/core/storage/token_storage.dart';
 import 'interceptors/auth_interceptor.dart';
-import '../storage/token_storage.dart';
 
 /// Singleton API client for making HTTP requests
 /// Handles authentication, error handling, and logging

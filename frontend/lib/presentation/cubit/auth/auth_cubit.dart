@@ -112,7 +112,7 @@ class AuthCubit extends Cubit<AuthState> {
       }
       return message;
     }
-    return 'An unexpected error occurred';
+    return 'An unexpected error occurred: $error}';
   }
 
   void _logError(String message) {

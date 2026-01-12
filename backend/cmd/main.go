@@ -2,11 +2,13 @@ package main
 
 import (
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tgogbera/google_keep_clone-backend/internal/config"
 	"github.com/tgogbera/google_keep_clone-backend/internal/database"
 	"github.com/tgogbera/google_keep_clone-backend/internal/handlers"
+	"github.com/tgogbera/google_keep_clone-backend/internal/models"
 )
 
 func main() {
@@ -57,11 +59,13 @@ func main() {
 	{
 		protected.GET("/me", func(c *gin.Context) {
 			userID := c.GetInt("user_id")
-			email := c.GetString("email")
-			c.JSON(200, gin.H{
-				"user_id": userID,
-				"email":   email,
-			})
+			// Load full user from database and return DTO so frontend has id/created_at/updated_at
+			var user models.User
+			if err := database.DB.First(&user, userID).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+				return
+			}
+			c.JSON(200, user.ToDTO())
 		})
 
 		// Note routes
