@@ -8,7 +8,6 @@ import 'core/observers/app_bloc_observer.dart';
 import 'core/storage/token_storage.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/note_repository.dart';
-import 'presentation/cubit/note/note_cubit.dart';
 import 'core/router/app_router.dart';
 
 void main() {
@@ -41,18 +40,11 @@ class MyApp extends StatelessWidget {
           create: (context) => NoteRepository(apiClient: context.read<ApiClient>()),
         ),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<AuthCubit>(
-            create: (context) => AuthCubit(
-              authRepository: context.read<AuthRepository>(),
-              tokenStorage: context.read<TokenStorage>(),
-            )..checkAuthStatus(),
-          ),
-          BlocProvider<NoteCubit>(
-            create: (context) => NoteCubit(noteRepository: context.read<NoteRepository>()),
-          ),
-        ],
+      child: BlocProvider<AuthCubit>(
+        create: (context) => AuthCubit(
+          authRepository: context.read<AuthRepository>(),
+          tokenStorage: context.read<TokenStorage>(),
+        )..checkAuthStatus(),
         child: Builder(
           builder: (context) {
             return MaterialApp.router(

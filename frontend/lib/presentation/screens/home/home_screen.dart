@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:frontend/data/repositories/note_repository.dart';
 import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 import 'package:go_router/go_router.dart';
 import '../../cubit/note/note_cubit.dart';
@@ -98,105 +99,113 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notes'),
-        actions: [
-          PopupMenuButton(
-            icon: CircleAvatar(),
-            itemBuilder: (context) => <PopupMenuEntry>[
-              PopupMenuItem(enabled: false, child: Text('Signed in!')),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                onTap: () {
-                  context.read<AuthCubit>().logout();
-                  context.go('/login');
-                },
-                child: const Row(
-                  children: [Icon(Icons.logout), SizedBox(width: 8), Text('Logout')],
+    return BlocProvider<NoteCubit>(
+      create: (context) => NoteCubit(noteRepository: context.read<NoteRepository>()),
+      child: Builder(
+        builder: (context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Notes'),
+              actions: [
+                PopupMenuButton(
+                  icon: CircleAvatar(),
+                  itemBuilder: (context) => <PopupMenuEntry>[
+                    PopupMenuItem(enabled: false, child: Text('Signed in!')),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      onTap: () async {
+                        await context.read<AuthCubit>().logout();
+                        if (!context.mounted) return;
+                        context.go('/login');
+                      },
+                      child: const Row(
+                        children: [Icon(Icons.logout), SizedBox(width: 8), Text('Logout')],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  mainAxisAlignment: .center,
+                  children: [
+                    BlocConsumer<NoteCubit, NoteState>(
+                      listener: (context, state) {
+                        if (state is NoteCreated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Note created successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          context.read<NoteCubit>().fetchNotes();
+                        }
+                        if (state is NoteUpdated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Note updated successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          context.read<NoteCubit>().fetchNotes();
+                        }
+
+                        if (state is NoteDeleted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Note deleted successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          context.read<NoteCubit>().fetchNotes();
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is NoteInitial || state is NoteLoading) {
+                          return Center(child: const CircularProgressIndicator());
+                        }
+
+                        if (state is NotesLoaded) {
+                          final notes = state.notes;
+                          if (notes.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(
+                                'No notes available. Tap the + button to create your first note.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                              ),
+                            );
+                          }
+
+                          return Expanded(
+                            child: ListView.builder(
+                              itemCount: notes.length,
+                              itemBuilder: (context, index) {
+                                final note = notes[index];
+                                return Card(child: ListTile(title: Text(note.title)));
+                              },
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            mainAxisAlignment: .center,
-            children: [
-              BlocConsumer<NoteCubit, NoteState>(
-                listener: (context, state) {
-                  if (state is NoteCreated) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Note created successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    context.read<NoteCubit>().fetchNotes();
-                  }
-                  if (state is NoteUpdated) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Note updated successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    context.read<NoteCubit>().fetchNotes();
-                  }
-
-                  if (state is NoteDeleted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Note deleted successfully!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    context.read<NoteCubit>().fetchNotes();
-                  }
-                },
-                builder: (context, state) {
-                  if (state is NoteInitial || state is NoteLoading) {
-                    return Center(child: const CircularProgressIndicator());
-                  }
-
-                  if (state is NotesLoaded) {
-                    final notes = state.notes;
-                    if (notes.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          'No notes available. Tap the + button to create your first note.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                        ),
-                      );
-                    }
-
-                    return Expanded(
-                      child: ListView.builder(
-                        itemCount: notes.length,
-                        itemBuilder: (context, index) {
-                          final note = notes[index];
-                          return Card(child: ListTile(title: Text(note.title)));
-                        },
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateNoteDialog(context),
-        child: const Icon(Icons.add),
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () => _showCreateNoteDialog(context),
+              child: const Icon(Icons.add),
+            ),
+          );
+        },
       ),
     );
   }
