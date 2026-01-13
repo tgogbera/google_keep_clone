@@ -3,7 +3,7 @@ package models
 import "time"
 
 type User struct {
-	ID           uint      `json:"id" gorm:"primaryKey"`
+	ID           int64     `json:"id" gorm:"primaryKey"`
 	Email        string    `json:"email" gorm:"uniqueIndex;size:255;not null"`
 	PasswordHash string    `json:"-" gorm:"size:255;not null"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -22,7 +22,7 @@ type LoginRequest struct {
 
 // UserDTO represents a user data transfer object without sensitive information
 type UserDTO struct {
-	ID        uint      `json:"id"`
+	ID        int64     `json:"id"`
 	Email     string    `json:"email"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

@@ -27,7 +27,7 @@ func CreateNote(c *gin.Context) {
 	note := models.Note{
 		Title:   req.Title,
 		Content: req.Content,
-		UserID:  userID.(uint),
+		UserID:  userID.(int64),
 	}
 
 	if err := database.DB.Create(&note).Error; err != nil {
@@ -47,7 +47,7 @@ func GetAllNotes(c *gin.Context) {
 	}
 
 	var notes []models.Note
-	if err := database.DB.Where("user_id = ?", userID.(uint)).Order("created_at DESC").Find(&notes).Error; err != nil {
+	if err := database.DB.Where("user_id = ?", userID.(int64)).Order("created_at DESC").Find(&notes).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve notes"})
 		return
 	}
@@ -58,7 +58,7 @@ func GetAllNotes(c *gin.Context) {
 func UpdateNote(c *gin.Context) {
 	// Get note ID from URL parameter
 	noteIDStr := c.Param("id")
-	noteID, err := strconv.ParseUint(noteIDStr, 10, 32)
+	noteID, err := strconv.ParseInt(noteIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
 		return
@@ -73,7 +73,7 @@ func UpdateNote(c *gin.Context) {
 
 	// Check if note exists and belongs to user
 	var note models.Note
-	if err := database.DB.Where("id = ? AND user_id = ?", noteID, userID.(uint)).First(&note).Error; err != nil {
+	if err := database.DB.Where("id = ? AND user_id = ?", noteID, userID.(int64)).First(&note).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
 		return
 	}
@@ -115,7 +115,7 @@ func UpdateNote(c *gin.Context) {
 func DeleteNote(c *gin.Context) {
 	// Get note ID from URL parameter
 	noteIDStr := c.Param("id")
-	noteID, err := strconv.ParseUint(noteIDStr, 10, 32)
+	noteID, err := strconv.ParseInt(noteIDStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
 		return
@@ -130,7 +130,7 @@ func DeleteNote(c *gin.Context) {
 
 	// Check if note exists and belongs to user
 	var note models.Note
-	if err := database.DB.Where("id = ? AND user_id = ?", noteID, userID.(uint)).First(&note).Error; err != nil {
+	if err := database.DB.Where("id = ? AND user_id = ?", noteID, userID.(int64)).First(&note).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
 		return
 	}

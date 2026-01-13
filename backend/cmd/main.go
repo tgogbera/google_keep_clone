@@ -57,15 +57,40 @@ func main() {
 	protected := api.Group("/")
 	protected.Use(handlers.AuthMiddleware())
 	{
+
 		protected.GET("/me", func(c *gin.Context) {
-			userID := c.GetInt("user_id")
-			// Load full user from database and return DTO so frontend has id/created_at/updated_at
-			var user models.User
-			if err := database.DB.First(&user, userID).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			// Safely extract user_id from context
+			userID, exists := c.Get("user_id")
+			if !exists {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
 				return
 			}
-			c.JSON(200, user.ToDTO())
+
+			// Type assert to int64 (claims.UserID is int64)
+			userIDInt64, ok := userID.(int64)
+			if !ok {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user_id type"})
+				return
+			}
+
+			// Validate user_id is positive
+			if userIDInt64 <= 0 {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user_id"})
+				return
+			}
+
+			// Load full user from database
+			var user models.User
+			if err := database.DB.First(&user, userIDInt64).Error; err != nil {
+				if err.Error() == "record not found" {
+					c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user"})
+				return
+			}
+
+			c.JSON(http.StatusOK, user.ToDTO())
 		})
 
 		// Note routes

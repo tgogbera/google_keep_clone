@@ -18,7 +18,7 @@ import (
 
 // Claims contains the JWT payload for access tokens.
 type Claims struct {
-	UserID uint   `json:"user_id"`
+	UserID int64  `json:"user_id"`
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
@@ -209,7 +209,7 @@ func Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 
-func generateAccessToken(userID uint, email string) (string, error) {
+func generateAccessToken(userID int64, email string) (string, error) {
 	cfg := config.Get()
 	expirationTime := time.Now().Add(cfg.AccessTokenTTL)
 	claims := &Claims{
@@ -226,7 +226,7 @@ func generateAccessToken(userID uint, email string) (string, error) {
 }
 
 // generateAndStoreRefreshToken creates a random refresh token, stores its hash and returns the raw token.
-func generateAndStoreRefreshToken(userID uint) (string, error) {
+func generateAndStoreRefreshToken(userID int64) (string, error) {
 	// generate 64 random bytes
 	raw := make([]byte, 64)
 	if _, err := rand.Read(raw); err != nil {
