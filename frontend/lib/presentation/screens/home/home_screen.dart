@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:frontend/data/models/note.dart';
 import 'package:frontend/data/repositories/note_repository.dart';
 import 'package:frontend/presentation/cubit/auth/auth_cubit.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,152 @@ import '../../cubit/note/note_cubit.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  void _showEditNoteDialog(BuildContext context, Note note) {
+    final titleController = TextEditingController(text: note.title);
+    final contentController = TextEditingController(text: note.content);
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<NoteCubit>(),
+        child: BlocListener<NoteCubit, NoteState>(
+          listener: (context, state) {
+            if (state is NoteUpdated) {
+              Navigator.of(dialogContext).pop();
+            } else if (state is NoteError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
+            }
+          },
+          child: AlertDialog(
+            title: const Text('Edit Note'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Title',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a title';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: contentController,
+                      decoration: const InputDecoration(
+                        labelText: 'Content',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              BlocBuilder<NoteCubit, NoteState>(
+                builder: (context, state) {
+                  final isLoading = state is NoteLoading;
+                  return ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            if (formKey.currentState!.validate()) {
+                              context.read<NoteCubit>().updateNote(
+                                note.id.toString(),
+                                titleController.text.trim(),
+                                contentController.text.trim(),
+                              );
+                            }
+                          },
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save'),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Note note) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<NoteCubit>(),
+        child: BlocListener<NoteCubit, NoteState>(
+          listener: (context, state) {
+            if (state is NoteDeleted) {
+              Navigator.of(dialogContext).pop();
+            } else if (state is NoteError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              );
+            }
+          },
+          child: AlertDialog(
+            title: const Text('Delete Note'),
+            content: Text('Are you sure you want to delete "${note.title}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              BlocBuilder<NoteCubit, NoteState>(
+                builder: (context, state) {
+                  final isLoading = state is NoteLoading;
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            context.read<NoteCubit>().deleteNote(note.id.toString());
+                          },
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Delete'),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showCreateNoteDialog(BuildContext context) {
     final titleController = TextEditingController();
@@ -188,7 +335,50 @@ class HomeScreen extends StatelessWidget {
                               itemCount: notes.length,
                               itemBuilder: (context, index) {
                                 final note = notes[index];
-                                return Card(child: ListTile(title: Text(note.title)));
+                                return Card(
+                                  child: ListTile(
+                                    title: Text(note.title),
+                                    subtitle: note.content.isNotEmpty
+                                        ? Text(
+                                            note.content,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          )
+                                        : null,
+                                    trailing: PopupMenuButton<String>(
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          _showEditNoteDialog(context, note);
+                                        } else if (value == 'delete') {
+                                          _showDeleteConfirmation(context, note);
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit),
+                                              SizedBox(width: 8),
+                                              Text('Edit'),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete, color: Colors.red),
+                                              SizedBox(width: 8),
+                                              Text('Delete', style: TextStyle(color: Colors.red)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () => _showEditNoteDialog(context, note),
+                                  ),
+                                );
                               },
                             ),
                           );
