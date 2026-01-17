@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -14,6 +13,16 @@ const (
 	EnvProduction  Environment = "production"
 )
 
+// LogLevel represents the logging level
+type LogLevel string
+
+const (
+	LogLevelDebug LogLevel = "debug"
+	LogLevelInfo  LogLevel = "info"
+	LogLevelWarn  LogLevel = "warn"
+	LogLevelError LogLevel = "error"
+)
+
 // Config holds all runtime configuration for the app.
 type Config struct {
 	// Environment indicates whether the app is running in development or production.
@@ -21,9 +30,6 @@ type Config struct {
 
 	// Server
 	Port string
-
-	// Database
-	DatabaseURL string
 
 	// Auth / Security
 	JWTSecret string
@@ -34,6 +40,12 @@ type Config struct {
 
 	// Refresh token cookie
 	RefreshTokenCookieName string
+
+	// Logging
+	LogLevel LogLevel
+
+	// Warnings collected during config load (before logger is available)
+	Warnings []string
 }
 
 var cfg *Config
@@ -57,35 +69,53 @@ func Load() {
 
 	port := getEnv("PORT", "8080")
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Println("WARNING: DATABASE_URL is not set")
-	}
+	var warnings []string
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		log.Println("WARNING: JWT_SECRET is not set")
+		warnings = append(warnings, "JWT_SECRET is not set - using empty secret is insecure")
 	}
 
 	// TTLs: read minutes/days from env with sensible defaults
 	atMin := getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 15)
 	rtDays := getEnvInt("REFRESH_TOKEN_TTL_DAYS", 7)
 
+	// Log level: default to debug in development, info in production
+	logLevelStr := getEnv("LOG_LEVEL", "")
+	var logLevel LogLevel
+	switch LogLevel(logLevelStr) {
+	case LogLevelDebug:
+		logLevel = LogLevelDebug
+	case LogLevelInfo:
+		logLevel = LogLevelInfo
+	case LogLevelWarn:
+		logLevel = LogLevelWarn
+	case LogLevelError:
+		logLevel = LogLevelError
+	default:
+		if environment == EnvProduction {
+			logLevel = LogLevelInfo
+		} else {
+			logLevel = LogLevelDebug
+		}
+	}
+
 	cfg = &Config{
 		Environment:            environment,
 		Port:                   port,
-		DatabaseURL:            dbURL,
 		JWTSecret:              jwtSecret,
 		AccessTokenTTL:         time.Duration(atMin) * time.Minute,
 		RefreshTokenTTL:        time.Duration(rtDays) * 24 * time.Hour,
 		RefreshTokenCookieName: getEnv("REFRESH_TOKEN_COOKIE", "refresh_token"),
+		LogLevel:               logLevel,
+		Warnings:               warnings,
 	}
 }
 
 // Get returns the loaded configuration. It panics if Load has not been called.
 func Get() *Config {
 	if cfg == nil {
-		log.Fatal("config not loaded: call config.Load() at startup")
+		panic("config not loaded: call config.Load() at startup")
 	}
 	return cfg
 }
@@ -104,7 +134,7 @@ func getEnvInt(key string, fallback int) int {
 	}
 	v, err := strconv.Atoi(valStr)
 	if err != nil {
-		log.Printf("WARNING: invalid int for %s: %v, using fallback %d", key, err, fallback)
+		// Invalid int values silently use fallback - this is acceptable for config
 		return fallback
 	}
 	return v

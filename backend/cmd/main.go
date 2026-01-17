@@ -1,26 +1,50 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tgogbera/google_keep_clone-backend/internal/config"
 	"github.com/tgogbera/google_keep_clone-backend/internal/database"
 	"github.com/tgogbera/google_keep_clone-backend/internal/handlers"
+	"github.com/tgogbera/google_keep_clone-backend/internal/logger"
 	"github.com/tgogbera/google_keep_clone-backend/internal/models"
 )
 
 func main() {
 	// Load configuration (based on environment variables)
 	config.Load()
+	cfg := config.Get()
+
+	// Initialize logger
+	logger.Init(logger.Config{
+		Level:       logger.LogLevel(cfg.LogLevel),
+		Environment: string(cfg.Environment),
+	})
+
+	// Log any config warnings that were collected before logger was available
+	for _, warning := range cfg.Warnings {
+		logger.Warn(warning)
+	}
+
+	// Set Gin mode based on environment
+	if cfg.Environment == config.EnvProduction {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	// Initialize database
 	if err := database.InitDB(); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		logger.WithError(err).Fatal("Failed to initialize database")
 	}
 
-	router := gin.Default()
+	// Create router without default middleware (we'll add our own)
+	router := gin.New()
+
+	// Add recovery middleware (handles panics)
+	router.Use(logger.RecoveryLogger())
+
+	// Add request logging middleware
+	router.Use(logger.RequestLogger())
 
 	// CORS middleware
 	router.Use(func(c *gin.Context) {
@@ -101,8 +125,9 @@ func main() {
 	}
 
 	// Start server with configured port
-	addr := ":" + config.Get().Port
+	addr := ":" + cfg.Port
+	logger.WithField("address", addr).Info("Starting server")
 	if err := router.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.WithError(err).Fatal("Failed to start server")
 	}
 }

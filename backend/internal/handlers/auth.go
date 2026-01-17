@@ -10,8 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sirupsen/logrus"
 	"github.com/tgogbera/google_keep_clone-backend/internal/config"
 	"github.com/tgogbera/google_keep_clone-backend/internal/database"
+	"github.com/tgogbera/google_keep_clone-backend/internal/logger"
 	"github.com/tgogbera/google_keep_clone-backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,15 +26,25 @@ type Claims struct {
 }
 
 func Register(c *gin.Context) {
+	log := logger.WithFields(logrus.Fields{
+		"handler": "Register",
+		"ip":      c.ClientIP(),
+	})
+
 	var req models.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.WithError(err).Warn("Invalid registration request")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	log = log.WithField("email", req.Email)
+	log.Info("Processing registration request")
+
 	// Check if user already exists
 	var existing models.User
 	if err := database.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+		log.Warn("Registration failed: email already exists")
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
 	}
@@ -40,6 +52,7 @@ func Register(c *gin.Context) {
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		log.WithError(err).Error("Failed to hash password")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
@@ -50,19 +63,24 @@ func Register(c *gin.Context) {
 		PasswordHash: string(hashedPassword),
 	}
 	if err := database.DB.Create(&user).Error; err != nil {
+		log.WithError(err).Error("Failed to create user in database")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
+	log = log.WithField("user_id", user.ID)
+
 	// Create tokens
 	accessToken, err := generateAccessToken(user.ID, user.Email)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate access token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
 	refreshToken, err := generateAndStoreRefreshToken(user.ID)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate refresh token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
 	}
@@ -72,6 +90,8 @@ func Register(c *gin.Context) {
 	maxAge := int(cfg.RefreshTokenTTL.Seconds())
 	secure := cfg.Environment == config.EnvProduction
 	c.SetCookie(cfg.RefreshTokenCookieName, refreshToken, maxAge, "/", "", secure, true)
+
+	log.Info("User registered successfully")
 
 	c.JSON(http.StatusCreated, models.AuthResponse{
 		Token:        accessToken,
@@ -81,15 +101,25 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
+	log := logger.WithFields(logrus.Fields{
+		"handler": "Login",
+		"ip":      c.ClientIP(),
+	})
+
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.WithError(err).Warn("Invalid login request")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	log = log.WithField("email", req.Email)
+	log.Info("Processing login request")
+
 	// Get user from database
 	var user models.User
 	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		log.Warn("Login failed: user not found")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -97,19 +127,24 @@ func Login(c *gin.Context) {
 	// Check password
 	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
+		log.Warn("Login failed: invalid password")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
+	log = log.WithField("user_id", user.ID)
+
 	// Create tokens
 	accessToken, err := generateAccessToken(user.ID, user.Email)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate access token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
 	refreshToken, err := generateAndStoreRefreshToken(user.ID)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate refresh token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
 	}
@@ -119,6 +154,8 @@ func Login(c *gin.Context) {
 	maxAge := int(cfg.RefreshTokenTTL.Seconds())
 	secure := cfg.Environment == config.EnvProduction
 	c.SetCookie(cfg.RefreshTokenCookieName, refreshToken, maxAge, "/", "", secure, true)
+
+	log.Info("User logged in successfully")
 
 	c.JSON(http.StatusOK, models.AuthResponse{
 		Token:        accessToken,
@@ -129,6 +166,11 @@ func Login(c *gin.Context) {
 
 // Refresh exchanges a valid refresh token for a new access token and rotates the refresh token.
 func Refresh(c *gin.Context) {
+	log := logger.WithFields(logrus.Fields{
+		"handler": "Refresh",
+		"ip":      c.ClientIP(),
+	})
+
 	cfg := config.Get()
 	// Prefer cookie
 	rt, err := c.Cookie(cfg.RefreshTokenCookieName)
@@ -138,6 +180,7 @@ func Refresh(c *gin.Context) {
 			RefreshToken string `json:"refresh_token"`
 		}
 		if err := c.ShouldBindJSON(&body); err != nil || body.RefreshToken == "" {
+			log.Warn("Refresh failed: no refresh token provided")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token required"})
 			return
 		}
@@ -147,11 +190,15 @@ func Refresh(c *gin.Context) {
 	hash := hashToken(rt)
 	var stored models.RefreshToken
 	if err := database.DB.Where("token_hash = ?", hash).First(&stored).Error; err != nil {
+		log.Warn("Refresh failed: invalid refresh token")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
 		return
 	}
 
+	log = log.WithField("user_id", stored.UserID)
+
 	if stored.Revoked || stored.ExpiresAt.Before(time.Now()) {
+		log.Warn("Refresh failed: token expired or revoked")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token expired or revoked"})
 		return
 	}
@@ -159,6 +206,7 @@ func Refresh(c *gin.Context) {
 	// Load user
 	var user models.User
 	if err := database.DB.First(&user, stored.UserID).Error; err != nil {
+		log.WithError(err).Error("Refresh failed: user not found")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		return
 	}
@@ -166,12 +214,13 @@ func Refresh(c *gin.Context) {
 	// Revoke old refresh token (rotation)
 	stored.Revoked = true
 	if err := database.DB.Save(&stored).Error; err != nil {
-		// not fatal for the client, but log
+		log.WithError(err).Warn("Failed to revoke old refresh token")
 	}
 
 	// Create new refresh token
 	newRT, err := generateAndStoreRefreshToken(user.ID)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate new refresh token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate new refresh token"})
 		return
 	}
@@ -184,15 +233,28 @@ func Refresh(c *gin.Context) {
 	// Create new access token
 	accessToken, err := generateAccessToken(user.ID, user.Email)
 	if err != nil {
+		log.WithError(err).Error("Failed to generate access token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
 		return
 	}
+
+	log.Info("Token refreshed successfully")
 
 	c.JSON(http.StatusOK, gin.H{"token": accessToken})
 }
 
 // Logout revokes the refresh token (if present) and clears the cookie.
 func Logout(c *gin.Context) {
+	log := logger.WithFields(logrus.Fields{
+		"handler": "Logout",
+		"ip":      c.ClientIP(),
+	})
+
+	// Try to get user_id from context if available (from AuthMiddleware)
+	if userID, exists := c.Get("user_id"); exists {
+		log = log.WithField("user_id", userID)
+	}
+
 	cfg := config.Get()
 	rt, err := c.Cookie(cfg.RefreshTokenCookieName)
 	if err == nil && rt != "" {
@@ -200,12 +262,19 @@ func Logout(c *gin.Context) {
 		var stored models.RefreshToken
 		if err := database.DB.Where("token_hash = ?", hash).First(&stored).Error; err == nil {
 			stored.Revoked = true
-			database.DB.Save(&stored)
+			if err := database.DB.Save(&stored).Error; err != nil {
+				log.WithError(err).Warn("Failed to revoke refresh token during logout")
+			} else {
+				log.Debug("Refresh token revoked")
+			}
 		}
 	}
 
 	// Clear cookie
 	c.SetCookie(cfg.RefreshTokenCookieName, "", -1, "/", "", cfg.Environment == config.EnvProduction, true)
+
+	log.Info("User logged out successfully")
+
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 
@@ -257,9 +326,16 @@ func hashToken(t string) string {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log := logger.WithFields(logrus.Fields{
+			"middleware": "AuthMiddleware",
+			"path":       c.Request.URL.Path,
+			"ip":         c.ClientIP(),
+		})
+
 		cfg := config.Get()
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
+			log.Warn("Authorization header missing")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
@@ -276,10 +352,16 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			log.WithError(err).Warn("Invalid token")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
+
+		log.WithFields(logrus.Fields{
+			"user_id": claims.UserID,
+			"email":   claims.Email,
+		}).Debug("Token validated successfully")
 
 		c.Set("user_id", claims.UserID)
 		c.Set("email", claims.Email)
