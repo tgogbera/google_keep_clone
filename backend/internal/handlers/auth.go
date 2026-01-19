@@ -240,7 +240,10 @@ func Refresh(c *gin.Context) {
 
 	log.Info("Token refreshed successfully")
 
-	c.JSON(http.StatusOK, gin.H{"token": accessToken})
+	c.JSON(http.StatusOK, gin.H{
+		"token":         accessToken,
+		"refresh_token": newRT,
+	})
 }
 
 // Logout revokes the refresh token (if present) and clears the cookie.
